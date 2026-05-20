@@ -1,7 +1,7 @@
 SYNC1: int = 0xFF
 SYNC2: int = 0x5A
 ETX: int = 0x33
-CLASS_LOG: int = 0x01
+CLASS_LOG: int = 0x00   # SBG_ECOM_CLASS_LOG_ECOM_0 — verified from raw capture
 
 MSG_STATUS: int = 0x01
 MSG_UTC_TIME: int = 0x02

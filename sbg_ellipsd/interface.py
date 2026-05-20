@@ -81,7 +81,12 @@ class EllipsDInterface:
         self._serial = serial.Serial(
             port=self._port,
             baudrate=self._baudrate,
+            bytesize=serial.EIGHTBITS,
+            parity=serial.PARITY_NONE,
+            stopbits=serial.STOPBITS_ONE,
             timeout=0.1,
+            rtscts=False,    # disable hardware flow control
+            xonxoff=False,   # disable software flow control
         )
         self._stop_event.clear()
         self._thread = threading.Thread(

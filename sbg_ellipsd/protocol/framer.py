@@ -31,13 +31,15 @@ class FrameReader:
 
     Each yielded tuple contains ``(msg_id: int, msg_class: int, payload: bytes)``.
 
-    Per SBG ECom v5.6 specification the CRC-16 is computed over MSG_ID + CLASS +
-    PAYLOAD (LENGTH bytes are intentionally excluded from the checksum scope).
+    CRC-16 scope (verified against sbgEComProtocol.c in the SBG SDK):
+        sbgCrc16Compute(&frame[MSG_ID_OFFSET],
+                        PAYLOAD_OFFSET - MSG_ID_OFFSET + payloadSize)
+    i.e. MSG_ID + CLASS + LEN_LO + LEN_HI + PAYLOAD  (all 4 header bytes included).
     """
 
     def __init__(self) -> None:
         self._state: _State = _State.WAIT_SYNC1
-        self._crc_buf: bytearray = bytearray()   # [msg_id, class] + payload
+        self._crc_buf: bytearray = bytearray()   # [msg_id, class, len_lo, len_hi] + payload
         self._header: bytearray = bytearray()    # [msg_id, class, len_lo, len_hi]
         self._payload: bytearray = bytearray()
         self._expected_len: int = 0
@@ -67,14 +69,19 @@ class FrameReader:
                 self._header = bytearray()
                 self._crc_buf = bytearray()
                 self._state = _State.HEADER
+            elif byte == SYNC1:
+                # Another 0xFF immediately after the first: treat it as the new
+                # SYNC1 and stay waiting for SYNC2.  Without this, a sequence
+                # like 0xFF 0xFF 0x5A would miss the valid frame.
+                pass   # state stays WAIT_SYNC2
             else:
                 self._reset()
 
         elif state is _State.HEADER:
             self._header.append(byte)
             if len(self._header) == 4:
-                # CRC scope: msg_id + class (first 2 header bytes; LENGTH excluded)
-                self._crc_buf = bytearray(self._header[:2])
+                # Seed CRC with all 4 header bytes: MSG_ID + CLASS + LEN_LO + LEN_HI
+                self._crc_buf = bytearray(self._header)
                 self._expected_len = self._header[2] | (self._header[3] << 8)
                 self._payload = bytearray()
                 self._state = _State.PAYLOAD if self._expected_len else _State.CRC_LO

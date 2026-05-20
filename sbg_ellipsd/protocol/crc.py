@@ -14,8 +14,9 @@ _TABLE: tuple[int, ...] = _build_table()
 def compute_crc(data: bytes) -> int:
     """CRC-16 using polynomial 0x8408 (bit-reversed CRC-CCITT).
 
-    Scope per SBG ECom spec: from MSG_ID byte through end of payload,
-    including the CLASS and LENGTH bytes.
+    Scope per SBG ECom SDK (sbgEComProtocol.c):
+        MSG_ID + CLASS + LEN_LO + LEN_HI + PAYLOAD
+    Pass the 4-byte header slice followed by the payload as *data*.
     """
     crc = 0
     for byte in data:
