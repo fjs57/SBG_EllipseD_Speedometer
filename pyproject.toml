@@ -1,0 +1,82 @@
+# pyproject.toml — packaging metadata for the sbg_ellipsd driver package.
+#
+# Standard Python packaging layout:
+#
+#   Logger_speed/                ← repository / project root
+#   ├── pyproject.toml           ← this file (always at the project root)
+#   ├── sbg_ellipsd/             ← the installable Python package
+#   │   ├── __init__.py
+#   │   └── ...
+#   └── app/                     ← application (not distributed as a package)
+#
+# Install the driver in development mode:
+#   pip install -e .
+#
+# Install the driver with the application dependencies:
+#   pip install -e ".[app]"
+
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "sbg-ellipsd"
+version = "1.0.0"
+description = "Python interface driver for the SBG Systems ELLIPS-D INS over serial"
+readme = "README.md"
+license = { text = "MIT" }
+authors = [
+    { name = "Logger Speed Project" },
+]
+keywords = [
+    "INS", "IMU", "GPS", "SBG", "ELLIPSE", "inertial navigation",
+    "serial", "ECom", "navigation",
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering",
+    "Topic :: System :: Hardware :: Hardware Drivers",
+    "Typing :: Typed",
+]
+requires-python = ">=3.10"
+
+# Runtime dependencies — pyserial is the only external requirement.
+# All other dependencies (struct, threading, dataclasses, enum, logging)
+# are part of the Python standard library.
+dependencies = [
+    "pyserial>=3.5",
+]
+
+[project.optional-dependencies]
+# Extra dependencies required by the Logger Speed application (app/)
+app = [
+    "PyQt5>=5.15",
+    "pyqtgraph>=0.13",
+    "numpy>=1.24",
+]
+# Development / testing extras
+dev = [
+    "pytest>=8.0",
+    "pytest-timeout>=2.0",
+]
+
+[project.urls]
+"SBG ECom Documentation" = "https://developer.sbg-systems.com/sbgECom/5.6/"
+"SBG Systems" = "https://www.sbg-systems.com/"
+
+[tool.setuptools.packages.find]
+# Search for Python packages starting from the project root.
+# Only sbg_ellipsd (and its sub-packages) will be included.
+where = ["."]
+include = ["sbg_ellipsd*"]
+
+[tool.setuptools.package-data]
+# Include the py.typed marker so type checkers recognise this as a typed package
+sbg_ellipsd = ["py.typed"]
