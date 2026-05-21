@@ -1,6 +1,16 @@
+# Tooling / IDE
 .claude
-.venv
+.venv/
+
+# Python artefacts
 **/__pycache__/
-sbg_ellipsd.egg-info/
+*.pyc
+*.pyo
+*.egg-info/
+
+# PyInstaller build output
 build/
+dist/
+
+# Runtime data
 log/

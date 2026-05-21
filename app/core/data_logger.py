@@ -15,7 +15,28 @@ from pathlib import Path
 from app.config import LOG_DIR
 
 _log = logging.getLogger(__name__)
-_LOG_DIR = Path(LOG_DIR)
+
+
+def _resolve_log_dir() -> Path:
+    """Return the absolute path of the log directory.
+
+    When running as a PyInstaller bundle (``sys.frozen`` is set) the directory
+    is placed next to the ``.exe`` so that it is always in a user-writable
+    location regardless of where the user launched the application from.
+
+    In development mode the directory is relative to the current working
+    directory (project root).
+    """
+    import sys as _sys
+    if getattr(_sys, "frozen", False):
+        # Path of the .exe itself (not the temp unpack dir)
+        base = Path(_sys.executable).resolve().parent
+    else:
+        base = Path.cwd()
+    return base / LOG_DIR
+
+
+_LOG_DIR = _resolve_log_dir()
 
 # CSV column header
 _HEADER = [
