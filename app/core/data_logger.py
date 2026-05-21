@@ -1,4 +1,9 @@
-"""CSV data logger — writes speed and GPS position to a time-stamped file."""
+"""CSV data logger — writes speed and GPS position to a time-stamped file.
+
+Files are stored in the ``log/`` directory by default (see
+:data:`~app.config.LOG_DIR`).  The directory is created automatically on the
+first :meth:`DataLogger.start` call if it does not yet exist.
+"""
 
 from __future__ import annotations
 
@@ -7,7 +12,10 @@ import logging
 from datetime import datetime
 from pathlib import Path
 
+from app.config import LOG_DIR
+
 _log = logging.getLogger(__name__)
+_LOG_DIR = Path(LOG_DIR)
 
 # CSV column header
 _HEADER = [
@@ -46,8 +54,10 @@ class DataLogger:
         """Open (or create) the log file.
 
         Args:
-            name: Base filename without extension.  A ``.csv`` suffix is
-                  appended automatically.
+            name: Base filename (with or without extension, with or without a
+                  directory component).  If *name* has no directory part the
+                  file is placed in :data:`~app.config.LOG_DIR` (``log/``).
+                  The ``.csv`` extension is appended automatically when absent.
 
         Returns:
             The absolute path of the file that was opened.
@@ -58,6 +68,13 @@ class DataLogger:
         path = Path(name)
         if path.suffix.lower() != ".csv":
             path = path.with_suffix(".csv")
+
+        # Place bare filenames inside the default log directory
+        if not path.parent.name or path.parent == Path("."):
+            path = _LOG_DIR / path.name
+
+        # Create the target directory (including parents) if needed
+        path.parent.mkdir(parents=True, exist_ok=True)
 
         self._file = open(path, "w", newline="", encoding="utf-8")  # noqa: SIM115
         self._writer = csv.writer(self._file)

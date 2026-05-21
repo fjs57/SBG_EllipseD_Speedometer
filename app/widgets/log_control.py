@@ -10,6 +10,8 @@ from PyQt5.QtGui import QFont
 from PyQt5.QtWidgets import (QFileDialog, QHBoxLayout, QLabel,
                                QLineEdit, QPushButton, QSizePolicy, QWidget)
 
+from app.config import LOG_DIR
+
 
 class LogControl(QWidget):
     """Horizontal bar for naming and toggling the CSV data logger.
@@ -67,9 +69,9 @@ class LogControl(QWidget):
         layout.addWidget(QLabel("Log file:"))
 
         self._name_edit = QLineEdit()
-        self._name_edit.setPlaceholderText("run_01  (no extension needed)")
+        self._name_edit.setPlaceholderText(f"{LOG_DIR}/run_01")
         self._name_edit.setText(
-            f"run_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+            f"{LOG_DIR}/run_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
         )
         self._name_edit.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         layout.addWidget(self._name_edit)
@@ -92,10 +94,12 @@ class LogControl(QWidget):
         layout.addWidget(self._status_lbl)
 
     def _on_browse(self) -> None:
+        # Open the browser starting inside the log directory
+        current = self._name_edit.text().strip() or f"{LOG_DIR}/run"
         path, _ = QFileDialog.getSaveFileName(
             self,
             "Choose log destination",
-            self._name_edit.text(),
+            current,
             "CSV files (*.csv);;All files (*)",
         )
         if path:
@@ -107,7 +111,7 @@ class LogControl(QWidget):
         if checked:
             name = self._name_edit.text().strip()
             if not name:
-                name = f"run_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+                name = f"{LOG_DIR}/run_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
             self.start_requested.emit(name)
         else:
             self.stop_requested.emit()

@@ -27,6 +27,10 @@ DEFAULT_MARGIN_MS: float = DEFAULT_MARGIN_KMH / 3.6
 DEFAULT_PORT: str = "COM3"
 DEFAULT_BAUDRATE: int = 921_600  # matches typical ELLIPS-D factory setting
 
+# Directory where CSV log files are stored (relative to the working directory).
+# Created automatically if it does not exist.
+LOG_DIR: str = "log"
+
 # ── Real-time plot ───────────────────────────────────────────────────────────
 PLOT_HISTORY_SECONDS: int = 60  # rolling time window
 
