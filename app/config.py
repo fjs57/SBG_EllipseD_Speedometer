@@ -5,19 +5,30 @@ Body frame convention (SBG ELLIPS-D, as mounted in this vehicle):
 Forward speed is therefore ``LogEkfVelBody.velocity_x_ms``.
 """
 
-# ── Speed scale ─────────────────────────────────────────────────────────────
-MAX_SPEED_MS: float = 10.0
-MAX_SPEED_KMH: float = 40.0     # display ceiling in km/h mode
+import math as _math
 
 # ── Gauge geometry ───────────────────────────────────────────────────────────
 GAUGE_START_ANGLE: int = 225    # QPainter degrees (CCW from 3 o'clock), arc start (lower-left)
 GAUGE_SPAN: int = 270           # degrees swept clockwise to arc end (lower-right)
-GAUGE_MAJOR_TICKS: int = 10     # number of intervals between display min and max
-GAUGE_MINOR_TICKS: int = 5      # minor ticks per major interval
 
-# Gauge auto-scaling: the gauge always shows [target − view_half, target + view_half].
-# Clamped to [0, MAX_SPEED_MS].  Change via the "View ±" spin-box in the UI.
-GAUGE_VIEW_HALF_MS: float = 3.0
+
+def compute_speed_range(target_ms: float) -> tuple[float, float]:
+    """Compute the gauge / plot display range centred on *target_ms*.
+
+    The centre of the arc (12 o'clock) is the nearest integer to |target|.
+
+    Rules (t = nearest integer to |target_ms|, minimum 1)::
+
+        t <= 5  ->  [0,     2*t]        e.g. t=1->[0,2]   t=5->[0,10]
+        t >  5  ->  [0.5*t, 1.5*t]     e.g. t=10->[5,15]  t=20->[10,30]
+
+    Always returns (d_min, d_max) with d_min >= 0 and d_max > d_min.
+    """
+    t = max(1, _math.floor(abs(target_ms) + 0.5))   # standard rounding, min 1
+    if t <= 5:
+        return 0.0, float(2 * t)
+    return float(t) * 0.5, float(t) * 1.5
+
 
 # ── Default user settings ────────────────────────────────────────────────────
 DEFAULT_TARGET_MS: float = 3.0

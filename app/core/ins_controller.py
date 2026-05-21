@@ -98,12 +98,12 @@ class INSController(QObject):
         self._ins.add_listener_log_diag(self._on_diag)
 
     def _on_vel_body(self, msg: LogEkfVelBody) -> None:
-        # Body frame: X = forward.  Negative values (reversing) clamped to 0.
-        speed = max(0.0, msg.velocity_x_ms)
+        # Body frame: X = forward.  Negative = reversing; sign is preserved so
+        # the data logger can record it.  The gauge and plot take abs() themselves.
+        speed = msg.velocity_x_ms
         self._speed_ms = speed
         _log.log(_TRACE, "VEL_BODY  vx=%.4f  vy=%.4f  vz=%.4f m/s",
                  msg.velocity_x_ms, msg.velocity_y_ms, msg.velocity_z_ms)
-        # Signal delivery is automatically queued across threads by PyQt5
         self.speed_updated.emit(speed)
         self.message_received.emit()
 

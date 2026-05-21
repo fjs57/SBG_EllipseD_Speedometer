@@ -55,7 +55,6 @@ from PyQt5.QtWidgets import (
 from app.config import (
     COLOR_BG, COLOR_BORDER, COLOR_PANEL, COLOR_TEXT, COLOR_TEXT_DIM,
     DEFAULT_BAUDRATE, DEFAULT_MARGIN_MS, DEFAULT_PORT, DEFAULT_TARGET_MS,
-    GAUGE_VIEW_HALF_MS, MAX_SPEED_KMH, MAX_SPEED_MS,
 )
 from app.core.data_logger import DataLogger
 from app.core.ins_controller import INSController
@@ -356,7 +355,7 @@ class MainWindow(QMainWindow):
         row1 = QHBoxLayout()
         row1.addWidget(QLabel("Target:"))
         self._target_spin = QDoubleSpinBox()
-        self._target_spin.setRange(0.0, MAX_SPEED_MS)
+        self._target_spin.setRange(0.0, 9999.0)
         self._target_spin.setValue(DEFAULT_TARGET_MS)
         self._target_spin.setSingleStep(0.1)
         self._target_spin.setDecimals(2)
@@ -382,7 +381,7 @@ class MainWindow(QMainWindow):
         row2 = QHBoxLayout()
         row2.addWidget(QLabel("Zone ±:"))
         self._margin_spin = QDoubleSpinBox()
-        self._margin_spin.setRange(0.0, MAX_SPEED_MS / 2.0)
+        self._margin_spin.setRange(0.0, 9999.0)
         self._margin_spin.setValue(DEFAULT_MARGIN_MS)
         self._margin_spin.setSingleStep(0.1)
         self._margin_spin.setDecimals(2)
@@ -394,24 +393,6 @@ class MainWindow(QMainWindow):
         row2.addWidget(self._margin_spin)
         row2.addStretch()
         tgt_layout.addLayout(row2)
-
-        # Row 3: view half (gauge display window)
-        row3 = QHBoxLayout()
-        row3.addWidget(QLabel("View ±:"))
-        self._view_spin = QDoubleSpinBox()
-        self._view_spin.setRange(0.5, MAX_SPEED_MS)
-        self._view_spin.setValue(GAUGE_VIEW_HALF_MS)
-        self._view_spin.setSingleStep(0.5)
-        self._view_spin.setDecimals(1)
-        self._view_spin.setSuffix("  m/s")
-        self._view_spin.setFixedWidth(130)
-        self._view_spin.setToolTip(
-            "Gauge displays [target − view, target + view].\n"
-            "Decrease to zoom in on the target zone."
-        )
-        row3.addWidget(self._view_spin)
-        row3.addStretch()
-        tgt_layout.addLayout(row3)
 
         layout.addWidget(tgt_box)
 
@@ -426,13 +407,11 @@ class MainWindow(QMainWindow):
     def _connect_internal_signals(self) -> None:
         self._target_spin.valueChanged.connect(self._on_target_changed)
         self._margin_spin.valueChanged.connect(self._on_margin_changed)
-        self._view_spin.valueChanged.connect(self._on_view_changed)
         self._log_control.start_requested.connect(self._on_log_start)
         self._log_control.stop_requested.connect(self._on_log_stop)
         # Push initial values
         self._on_target_changed(self._target_spin.value())
         self._on_margin_changed(self._margin_spin.value())
-        self._on_view_changed(self._view_spin.value())
 
     def attach_log_handler(self, handler: QtLogHandler) -> None:
         """Connect the Qt log handler to the console panel."""
@@ -506,10 +485,6 @@ class MainWindow(QMainWindow):
         margin_ms = value / 3.6 if self._use_kmh else value
         self._gauge.set_margin(margin_ms)
 
-    @pyqtSlot(float)
-    def _on_view_changed(self, value: float) -> None:
-        view_ms = value / 3.6 if self._use_kmh else value
-        self._gauge.set_view_half(view_ms)
 
     def _set_unit(self, use_kmh: bool) -> None:
         self._use_kmh = use_kmh
@@ -521,51 +496,32 @@ class MainWindow(QMainWindow):
         if use_kmh:
             old_ms      = self._target_spin.value()
             old_marg_ms = self._margin_spin.value()
-            old_view_ms = self._view_spin.value()
             self._target_spin.blockSignals(True)
             self._margin_spin.blockSignals(True)
-            self._view_spin.blockSignals(True)
-            self._target_spin.setRange(0.0, MAX_SPEED_KMH)
             self._target_spin.setSingleStep(0.5)
             self._target_spin.setSuffix("  km/h")
-            self._margin_spin.setRange(0.0, MAX_SPEED_KMH / 2.0)
             self._margin_spin.setSingleStep(0.5)
             self._margin_spin.setSuffix("  km/h")
-            self._view_spin.setRange(1.0, MAX_SPEED_KMH)
-            self._view_spin.setSingleStep(1.0)
-            self._view_spin.setSuffix("  km/h")
             self._target_spin.setValue(old_ms * 3.6)
             self._margin_spin.setValue(old_marg_ms * 3.6)
-            self._view_spin.setValue(old_view_ms * 3.6)
             self._target_spin.blockSignals(False)
             self._margin_spin.blockSignals(False)
-            self._view_spin.blockSignals(False)
         else:
             old_kmh      = self._target_spin.value()
             old_marg_kmh = self._margin_spin.value()
-            old_view_kmh = self._view_spin.value()
             self._target_spin.blockSignals(True)
             self._margin_spin.blockSignals(True)
-            self._view_spin.blockSignals(True)
-            self._target_spin.setRange(0.0, MAX_SPEED_MS)
             self._target_spin.setSingleStep(0.1)
             self._target_spin.setSuffix("  m/s")
-            self._margin_spin.setRange(0.0, MAX_SPEED_MS / 2.0)
             self._margin_spin.setSingleStep(0.1)
             self._margin_spin.setSuffix("  m/s")
-            self._view_spin.setRange(0.5, MAX_SPEED_MS)
-            self._view_spin.setSingleStep(0.5)
-            self._view_spin.setSuffix("  m/s")
             self._target_spin.setValue(old_kmh / 3.6)
             self._margin_spin.setValue(old_marg_kmh / 3.6)
-            self._view_spin.setValue(old_view_kmh / 3.6)
             self._target_spin.blockSignals(False)
             self._margin_spin.blockSignals(False)
-            self._view_spin.blockSignals(False)
 
         self._on_target_changed(self._target_spin.value())
         self._on_margin_changed(self._margin_spin.value())
-        self._on_view_changed(self._view_spin.value())
 
     # ── Slots — INS data ──────────────────────────────────────────────────────
 
