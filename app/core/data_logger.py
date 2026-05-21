@@ -1,4 +1,4 @@
-"""CSV data logger — writes speed and GPS position to a time-stamped file.
+"""CSV data logger — writes speed, GPS position and decoded INS solution status.
 
 Files are stored in the ``log/`` directory by default (see
 :data:`~app.config.LOG_DIR`).  The directory is created automatically on the
@@ -29,7 +29,6 @@ def _resolve_log_dir() -> Path:
     """
     import sys as _sys
     if getattr(_sys, "frozen", False):
-        # Path of the .exe itself (not the temp unpack dir)
         base = Path(_sys.executable).resolve().parent
     else:
         base = Path.cwd()
@@ -38,8 +37,55 @@ def _resolve_log_dir() -> Path:
 
 _LOG_DIR = _resolve_log_dir()
 
-# CSV column header
-_HEADER = [
+# ── Solution-status decoding ──────────────────────────────────────────────────
+
+_SOLUTION_MODES: dict[int, str] = {
+    0: "UNINITIALIZED",
+    1: "VERTICAL_GYRO",
+    2: "AHRS",
+    3: "NAV_VELOCITY",
+    4: "NAV_POSITION",
+}
+
+# (column_name, bit_mask) for every flag field
+_STATUS_FLAGS: tuple[tuple[str, int], ...] = (
+    # Validity
+    ("attitude_valid",   0x00000010),
+    ("heading_valid",    0x00000020),
+    ("velocity_valid",   0x00000040),
+    ("position_valid",   0x00000080),
+    ("align_valid",      0x08000000),
+    # Active aiding sources
+    ("vert_ref_used",    0x00000100),
+    ("mag_ref_used",     0x00000200),
+    ("gps1_vel_used",    0x00000400),
+    ("gps1_pos_used",    0x00000800),
+    ("gps1_hdt_used",    0x00002000),
+    ("gps2_vel_used",    0x00004000),
+    ("gps2_pos_used",    0x00008000),
+    ("gps2_hdt_used",    0x00020000),
+    ("odo_used",         0x00040000),
+    ("dvl_bt_used",      0x00080000),
+    ("dvl_wt_used",      0x00100000),
+    ("vel1_used",        0x00200000),
+    ("usbl_used",        0x01000000),
+    ("airspeed_used",    0x02000000),
+    ("zupt_used",        0x04000000),
+    ("zaru_used",        0x20000000),
+    ("pos1_used",        0x40000000),
+)
+
+
+def _decode_solution(status: int) -> list[str]:
+    """Return one CSV cell per decoded field (mode text + one 0/1 per flag)."""
+    mode = _SOLUTION_MODES.get(status & 0x0F, f"UNKNOWN_{status & 0x0F}")
+    flags = [str(int(bool(status & mask))) for _, mask in _STATUS_FLAGS]
+    return [mode] + flags
+
+
+# ── CSV header ────────────────────────────────────────────────────────────────
+
+_HEADER: list[str] = [
     "timestamp_iso",
     "elapsed_s",
     "speed_ms",
@@ -47,9 +93,13 @@ _HEADER = [
     "latitude_deg",
     "longitude_deg",
     "altitude_m",
-    "solution_status",
+    # Decoded solution_status fields — one column per field
+    "solution_mode",
+    *[name for name, _ in _STATUS_FLAGS],
 ]
 
+
+# ── Logger class ──────────────────────────────────────────────────────────────
 
 class DataLogger:
     """Append-mode CSV logger.
@@ -90,11 +140,9 @@ class DataLogger:
         if path.suffix.lower() != ".csv":
             path = path.with_suffix(".csv")
 
-        # Place bare filenames inside the default log directory
         if not path.parent.name or path.parent == Path("."):
             path = _LOG_DIR / path.name
 
-        # Create the target directory (including parents) if needed
         path.parent.mkdir(parents=True, exist_ok=True)
 
         self._file = open(path, "w", newline="", encoding="utf-8")  # noqa: SIM115
@@ -104,7 +152,7 @@ class DataLogger:
         self._file_path = path.resolve()
         self._active = True
 
-        _log.info("Logging started → %s", self._file_path)
+        _log.info("Logging started -> %s", self._file_path)
         return str(self._file_path)
 
     def record(
@@ -130,9 +178,8 @@ class DataLogger:
             f"{latitude_deg:.7f}",
             f"{longitude_deg:.7f}",
             f"{altitude_m:.3f}",
-            solution_status,
+            *_decode_solution(solution_status),
         ])
-        # Flush every row so data is not lost if the app exits abruptly
         self._file.flush()
 
     def stop(self) -> str | None:
@@ -148,7 +195,7 @@ class DataLogger:
         self._active = False
         self._file = None
         self._writer = None
-        _log.info("Logging stopped → %s", path)
+        _log.info("Logging stopped -> %s", path)
         return path
 
     @property

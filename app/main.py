@@ -163,7 +163,7 @@ def _apply_dark_palette(app: QApplication) -> None:
             subcontrol-position: top left;
             padding: 0 4px;
         }
-        QLineEdit, QComboBox, QDoubleSpinBox {
+        QLineEdit, QComboBox {
             background-color: #16213e;
             border: 1px solid #0f3460;
             border-radius: 3px;

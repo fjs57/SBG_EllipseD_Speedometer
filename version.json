@@ -1,8 +1,8 @@
 {
-    "major": 1,
+    "major": 0,
     "minor": 0,
-    "revision": 0,
-    "build": 2,
-    "commit": "135abb1",
+    "revision": 1,
+    "build": 5,
+    "commit": "b9e8078",
     "is_dev": true
 }
