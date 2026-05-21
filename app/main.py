@@ -59,6 +59,7 @@ from app.config import (
 )
 from app.core.data_logger import DataLogger
 from app.core.ins_controller import INSController
+from app.version import COMMIT, FULL_VERSION
 from app.widgets.console_panel import ConsolePanel, QtLogHandler, TRACE
 from app.widgets.gps_display import GPSDisplay
 from app.widgets.log_control import LogControl
@@ -252,6 +253,13 @@ class MainWindow(QMainWindow):
         self._status_bar = QStatusBar()
         self.setStatusBar(self._status_bar)
         self._status_bar.showMessage("Disconnected")
+
+        # Version + commit hash pinned to the lower-right corner
+        _commit_short = COMMIT[:7] if len(COMMIT) > 7 else COMMIT
+        _ver_lbl = QLabel(f"  {FULL_VERSION}  [{_commit_short}]  ")
+        _ver_lbl.setFont(QFont("Courier New", 8))
+        _ver_lbl.setStyleSheet(f"color: {COLOR_TEXT_DIM};")
+        self._status_bar.addPermanentWidget(_ver_lbl)
 
         # Console dock (bottom, initially shown, user can close/float it)
         self._console = ConsolePanel()
