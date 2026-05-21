@@ -43,7 +43,7 @@ import argparse
 import logging
 import sys
 
-from PyQt5.QtCore import Qt, QTimer, pyqtSlot
+from PyQt5.QtCore import Qt, QSize, QTimer, pyqtSlot
 from PyQt5.QtGui import QColor, QFont, QPalette
 from PyQt5.QtWidgets import (
     QApplication, QComboBox, QDockWidget, QDoubleSpinBox, QGroupBox,
@@ -632,6 +632,46 @@ class MainWindow(QMainWindow):
 
     # ── Window lifecycle ──────────────────────────────────────────────────────
 
+    def showEvent(self, event) -> None:  # noqa: N802
+        super().showEvent(event)
+        # windowHandle() is only valid after the native window is created,
+        # which happens just before showEvent fires — schedule via the event
+        # loop to be safe.
+        QTimer.singleShot(0, self._setup_screen_tracking)
+
+    def _setup_screen_tracking(self) -> None:
+        """Connect to screenChanged and do an initial refresh.
+
+        Called once after the window is first shown.  The screenChanged signal
+        fires whenever the window moves to a monitor with a different DPI scale,
+        letting us recalculate pyqtgraph's viewport each time.
+        """
+        handle = self.windowHandle()
+        if handle:
+            handle.screenChanged.connect(self._on_screen_changed)
+        # Force an initial refresh: on the primary (lower-DPI) screen the
+        # ViewBox may not have computed its geometry correctly on first paint.
+        self._bump_resize()
+
+    def _on_screen_changed(self, _screen) -> None:
+        """Fired when the window moves to a monitor with a different DPI."""
+        # Give Qt a moment to finish updating the window geometry for the
+        # new screen before we trigger the resize.
+        QTimer.singleShot(80, self._bump_resize)
+
+    def _bump_resize(self) -> None:
+        """Force a genuine QResizeEvent through the full widget tree.
+
+        pyqtgraph's ViewBox calculates its grid geometry lazily from the
+        widget's device-pixel size.  When the window moves between monitors
+        with different DPI scales the cached size becomes stale.  A 1-pixel
+        resize + restore sends a real QResizeEvent to every child widget,
+        causing the ViewBox to recompute its viewport correctly.
+        """
+        s = self.size()
+        self.resize(s.width(), s.height() + 1)
+        QTimer.singleShot(0, lambda: self.resize(s))
+
     def closeEvent(self, event) -> None:  # noqa: N802
         _log.info("Application closing.")
         self._do_disconnect()
@@ -663,6 +703,12 @@ def _parse_args() -> argparse.Namespace:
 def main() -> None:
     args = _parse_args()
     qt_handler = _setup_logging(args.verbose)
+
+    # Must be set BEFORE QApplication is instantiated.
+    # Tells Qt to query each screen's DPI independently (per-monitor DPI
+    # awareness) so widgets are sized correctly on every monitor from the start.
+    QApplication.setAttribute(Qt.AA_EnableHighDpiScaling, True)
+    QApplication.setAttribute(Qt.AA_UseHighDpiPixmaps, True)
 
     app = QApplication(sys.argv)
     app.setApplicationName("Logger Speed")
