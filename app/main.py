@@ -366,9 +366,11 @@ class MainWindow(QMainWindow):
         self._unit_ms_btn = QPushButton("m/s")
         self._unit_ms_btn.setCheckable(True)
         self._unit_ms_btn.setChecked(True)
+        self._unit_ms_btn.setEnabled(False)   # active by default → disabled
         self._unit_ms_btn.setFixedWidth(46)
         self._unit_kmh_btn = QPushButton("km/h")
         self._unit_kmh_btn.setCheckable(True)
+        self._unit_kmh_btn.setEnabled(True)
         self._unit_kmh_btn.setFixedWidth(46)
         self._unit_ms_btn.clicked.connect(lambda: self._set_unit(False))
         self._unit_kmh_btn.clicked.connect(lambda: self._set_unit(True))
@@ -488,8 +490,12 @@ class MainWindow(QMainWindow):
 
     def _set_unit(self, use_kmh: bool) -> None:
         self._use_kmh = use_kmh
+        # Active button: checked + disabled (cannot click the current unit again)
+        # Inactive button: unchecked + enabled
         self._unit_ms_btn.setChecked(not use_kmh)
+        self._unit_ms_btn.setEnabled(use_kmh)
         self._unit_kmh_btn.setChecked(use_kmh)
+        self._unit_kmh_btn.setEnabled(not use_kmh)
         self._gauge.set_unit(use_kmh)
         self._plot.set_unit(use_kmh)
 
